@@ -1,4 +1,4 @@
-name = "humantrail-email-tracker"
+name = "humantrail"
 main = "src/index.ts"
 compatibility_date = "2026-02-26"
 

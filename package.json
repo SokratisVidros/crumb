@@ -2,14 +2,23 @@
   "name": "humantrail",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check .",
+    "check:fix": "biome check --write ."
   },
   "dependencies": {
     "hono": "^4.12.2",
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
     "@types/bun": "latest",
-    "@types/jsonwebtoken": "^9.0.10"
+    "@types/jsonwebtoken": "^9.0.10",
+    "typescript": "^5.9.3"
   }
 }

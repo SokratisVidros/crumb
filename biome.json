@@ -1,0 +1,21 @@
+{
+  "$schema": "https://biomejs.dev/schemas/latest/schema.json",
+  "vcs": {
+    "enabled": false
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": ["src/**/*.ts", "*.ts", "*.json", "*.md"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  }
+}
