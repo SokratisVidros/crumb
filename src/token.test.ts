@@ -19,8 +19,8 @@ describe("token helpers", () => {
       stepId: "welcome:open",
     });
 
-    // JWT format: header.payload.signature
-    expect(token.split(".")).toHaveLength(3);
+    // Token format: base64url-hmac (one dash, 12-char hex suffix)
+    expect(token).toMatch(/^[A-Za-z0-9_-]+-[0-9a-f]{12}$/);
   });
 
   it("returns null for tampered signature", () => {
@@ -29,8 +29,8 @@ describe("token helpers", () => {
       stepId: "welcome:open",
       secret: "test-secret",
     });
-    const [header, payload] = token.split(".");
-    const tamperedToken = `${header}.${payload}.invalidsig`;
+    const lastDash = token.lastIndexOf("-");
+    const tamperedToken = `${token.slice(0, lastDash + 1)}000000000000`;
 
     const parsed = decodeAndVerifyToken({
       token: tamperedToken,

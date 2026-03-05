@@ -100,6 +100,47 @@ describe("tracker routes", () => {
     expect(payload).toEqual({ found: false });
   });
 
+  it("records full tracking context when headers are present", async () => {
+    const { app, secret, apiKey } = makeApp();
+    const token = encodeToken({
+      runId: "run_context",
+      stepId: "welcome:open",
+      secret,
+    });
+
+    await app.request(`/t/${token}.gif`, {
+      headers: {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "accept-language": "en-US,en;q=0.9",
+        referer: "https://mail.example.com/",
+        "cf-connecting-ip": "203.0.113.42",
+        "cf-ipcountry": "US",
+        "cf-ipcity": "San Francisco",
+        "cf-region": "California",
+        "cf-ipcontinent": "NA",
+        "cf-timezone": "America/Los_Angeles",
+      },
+    });
+
+    const pollResponse = await app.request(`/api/events/${token}`, {
+      headers: { authorization: `Bearer ${apiKey}` },
+    });
+    const payload = await pollResponse.json();
+
+    expect(pollResponse.status).toBe(200);
+    expect(payload.found).toBe(true);
+    expect(payload.data.userAgent).toContain("Windows");
+    expect(payload.data.acceptLanguage).toBe("en-US,en;q=0.9");
+    expect(payload.data.referer).toBe("https://mail.example.com/");
+    expect(payload.data.ip).toBe("203.0.113.42");
+    expect(payload.data.os).toBe("Windows");
+    expect(payload.data.country).toBe("US");
+    expect(payload.data.city).toBe("San Francisco");
+    expect(payload.data.region).toBe("California");
+    expect(payload.data.continent).toBe("NA");
+    expect(payload.data.timezone).toBe("America/Los_Angeles");
+  });
+
   it("enforces first write wins per runId and stepId", async () => {
     const { app, secret, apiKey } = makeApp();
     const token = encodeToken({

@@ -1,6 +1,31 @@
 import { Hono } from "hono";
+import { getBorderCharacters, table } from "table";
+import { getTrackingContext } from "./request-context";
 import { decodeAndVerifyToken } from "./token";
-import type { EventStore } from "./types";
+import { type EventRecord, type EventStore, mergeTrackingParams } from "./types";
+
+const isDev = () => process.env.NODE_ENV === "development";
+
+/** ASCII-only border for plain text in browser. */
+const asciiBorder = getBorderCharacters("ramac");
+
+function formatEventsAscii(events: EventRecord[]): string {
+  const header = ["#", "runId", "stepId", "event", "url", "firedAt"];
+  if (events.length === 0) {
+    const emptyTable = table([header, ["-", "-", "-", "-", "-", "-"]], {
+      border: asciiBorder,
+    });
+    return `\n  Latest 10 events (dev)\n\n${emptyTable}\n`;
+  }
+  const rows = events.map((e, i) => {
+    const url = e.url ?? "-";
+    const firedAt = e.firedAt instanceof Date ? e.firedAt.toISOString() : String(e.firedAt);
+    return [String(i + 1), e.runId, e.stepId, e.event, url, firedAt];
+  });
+  const data = [header, ...rows];
+  const out = table(data, { border: asciiBorder });
+  return `\n  Latest 10 events (dev)\n\n${out}\n`;
+}
 
 const TRANSPARENT_GIF_BASE64 = "R0lGODlhAQABAIABAP///wAAACwAAAAAAQABAAACAkQBADs=";
 
@@ -21,19 +46,15 @@ const readApiKey = (request: Request) => {
   return request.headers.get("x-api-key") ?? request.headers.get("x-tracker-api-key") ?? "";
 };
 
-const readIp = (request: Request) => {
-  const cfIp = request.headers.get("cf-connecting-ip");
-  if (cfIp) {
-    return cfIp;
-  }
-
-  const xForwardedFor = request.headers.get("x-forwarded-for");
-  if (!xForwardedFor) {
-    return undefined;
-  }
-
-  return xForwardedFor.split(",")[0]?.trim() || undefined;
-};
+function buildEventParams(
+  runId: string,
+  stepId: string,
+  event: "open" | "click",
+  request: Request,
+  url?: string,
+) {
+  return mergeTrackingParams({ runId, stepId, event }, getTrackingContext(request), url);
+}
 
 export const createTracker = (config: TrackerConfig) => {
   const app = new Hono();
@@ -55,13 +76,9 @@ export const createTracker = (config: TrackerConfig) => {
     });
 
     if (parsed) {
-      await config.store.recordEvent({
-        runId: parsed.runId,
-        stepId: parsed.stepId,
-        event: "open",
-        userAgent: c.req.header("user-agent") ?? undefined,
-        ip: readIp(c.req.raw),
-      });
+      await config.store.recordEvent(
+        buildEventParams(parsed.runId, parsed.stepId, "open", c.req.raw),
+      );
     }
 
     c.header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
@@ -89,14 +106,9 @@ export const createTracker = (config: TrackerConfig) => {
       return c.json({ error: "invalid_tracking_link" }, 400);
     }
 
-    await config.store.recordEvent({
-      runId: parsed.runId,
-      stepId: parsed.stepId,
-      event: "click",
-      url: targetUrl,
-      userAgent: c.req.header("user-agent") ?? undefined,
-      ip: readIp(c.req.raw),
-    });
+    await config.store.recordEvent(
+      buildEventParams(parsed.runId, parsed.stepId, "click", c.req.raw, targetUrl),
+    );
 
     return c.redirect(targetUrl, 302);
   });
@@ -134,6 +146,20 @@ export const createTracker = (config: TrackerConfig) => {
   });
 
   app.get("/", (c) => c.json({ ok: true }));
+
+  app.get("/dev/events", async (c) => {
+    if (!isDev()) {
+      return c.json({ error: "not_found" }, 404);
+    }
+    const list =
+      typeof config.store.getLatestEvents === "function"
+        ? await config.store.getLatestEvents(10)
+        : [];
+    const body = formatEventsAscii(list);
+    return c.text(body, 200, {
+      "Content-Type": "text/plain; charset=utf-8",
+    });
+  });
 
   return app;
 };

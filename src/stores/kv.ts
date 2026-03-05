@@ -1,4 +1,4 @@
-import type { EventRecord, EventStore } from "../types";
+import type { EventRecord, EventStore, RecordEventParams } from "../types";
 
 type KVNamespaceLike = {
   get: (key: string) => Promise<string | null>;
@@ -10,15 +10,7 @@ type KVEventStoreOptions = {
   keyPrefix?: string;
 };
 
-type SerializedEventRecord = {
-  runId: string;
-  stepId: string;
-  event: "open" | "click";
-  url?: string;
-  userAgent?: string;
-  ip?: string;
-  firedAt: string;
-};
+type SerializedEventRecord = RecordEventParams & { firedAt: string };
 
 export class KVEventStore implements EventStore {
   private readonly keyPrefix: string;
@@ -31,14 +23,7 @@ export class KVEventStore implements EventStore {
     return `${this.keyPrefix}:${runId}:${stepId}`;
   }
 
-  async recordEvent(params: {
-    runId: string;
-    stepId: string;
-    event: "open" | "click";
-    url?: string;
-    userAgent?: string;
-    ip?: string;
-  }): Promise<void> {
+  async recordEvent(params: RecordEventParams): Promise<void> {
     const key = this.keyFor(params.runId, params.stepId);
     const existing = await this.options.kv.get(key);
     if (existing) {

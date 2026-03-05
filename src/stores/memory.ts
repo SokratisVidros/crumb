@@ -1,20 +1,15 @@
-import type { EventRecord, EventStore } from "../types";
+import type { EventRecord, EventStore, RecordEventParams } from "../types";
 
 export class MemoryEventStore implements EventStore {
   private readonly events = new Map<string, EventRecord>();
 
-  async recordEvent(params: {
-    runId: string;
-    stepId: string;
-    event: "open" | "click";
-    url?: string;
-    userAgent?: string;
-    ip?: string;
-  }): Promise<void> {
+  async recordEvent(params: RecordEventParams): Promise<void> {
     const key = `${params.runId}:${params.stepId}`;
     if (this.events.has(key)) {
       return;
     }
+
+    console.log("params", params);
 
     this.events.set(key, {
       ...params,
@@ -25,5 +20,11 @@ export class MemoryEventStore implements EventStore {
   async getEvent(params: { runId: string; stepId: string }): Promise<EventRecord | null> {
     const key = `${params.runId}:${params.stepId}`;
     return this.events.get(key) ?? null;
+  }
+
+  async getLatestEvents(limit: number): Promise<EventRecord[]> {
+    const all = Array.from(this.events.values());
+    const byNewest = all.sort((a, b) => b.firedAt.getTime() - a.firedAt.getTime());
+    return byNewest.slice(0, limit);
   }
 }

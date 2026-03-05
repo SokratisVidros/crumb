@@ -1,4 +1,12 @@
-import { EVENTS_SCHEMA_SQL, type EventRecord, type EventStore } from "../types";
+import {
+  applyTrackingFromRow,
+  EVENT_COLUMNS,
+  EVENTS_SCHEMA_SQL,
+  type EventRecord,
+  type EventStore,
+  type RecordEventParams,
+  trackingBindValues,
+} from "../types";
 
 type QueryResult<T> = {
   rows: T[];
@@ -17,10 +25,22 @@ type PostgresRow = {
   step_id: string;
   event: "open" | "click";
   url: string | null;
-  user_agent: string | null;
-  ip: string | null;
   fired_at: string | Date;
-};
+} & Record<string, string | null>;
+
+const PLACEHOLDER_LIST = Array.from({ length: 19 }, (_, i) => `$${i + 1}`).join(", ");
+
+function rowToEventRecord(row: PostgresRow): EventRecord {
+  const event: EventRecord = {
+    runId: row.run_id,
+    stepId: row.step_id,
+    event: row.event,
+    firedAt: new Date(row.fired_at),
+  };
+  if (row.url != null) event.url = row.url;
+  applyTrackingFromRow(event, row);
+  return event;
+}
 
 export class PostgresEventStore implements EventStore {
   constructor(private readonly options: PostgresEventStoreOptions) {}
@@ -29,34 +49,23 @@ export class PostgresEventStore implements EventStore {
     await this.options.client.query(EVENTS_SCHEMA_SQL);
   }
 
-  async recordEvent(params: {
-    runId: string;
-    stepId: string;
-    event: "open" | "click";
-    url?: string;
-    userAgent?: string;
-    ip?: string;
-  }): Promise<void> {
+  async recordEvent(params: RecordEventParams): Promise<void> {
     await this.options.client.query(
-      `INSERT INTO events (run_id, step_id, event, url, user_agent, ip)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO events (${EVENT_COLUMNS}) VALUES (${PLACEHOLDER_LIST})
        ON CONFLICT (run_id, step_id) DO NOTHING`,
       [
         params.runId,
         params.stepId,
         params.event,
         params.url ?? null,
-        params.userAgent ?? null,
-        params.ip ?? null,
+        ...trackingBindValues(params),
       ],
     );
   }
 
   async getEvent(params: { runId: string; stepId: string }): Promise<EventRecord | null> {
     const result = await this.options.client.query<PostgresRow>(
-      `SELECT run_id, step_id, event, url, user_agent, ip, fired_at
-       FROM events
-       WHERE run_id = $1 AND step_id = $2`,
+      `SELECT ${EVENT_COLUMNS}, fired_at FROM events WHERE run_id = $1 AND step_id = $2`,
       [params.runId, params.stepId],
     );
 
@@ -64,15 +73,6 @@ export class PostgresEventStore implements EventStore {
     if (!row) {
       return null;
     }
-
-    return {
-      runId: row.run_id,
-      stepId: row.step_id,
-      event: row.event,
-      url: row.url ?? undefined,
-      userAgent: row.user_agent ?? undefined,
-      ip: row.ip ?? undefined,
-      firedAt: new Date(row.fired_at),
-    };
+    return rowToEventRecord(row);
   }
 }
