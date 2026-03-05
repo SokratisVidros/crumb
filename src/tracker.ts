@@ -19,7 +19,7 @@ function formatEventsAscii(events: EventRecord[]): string {
   }
   const rows = events.map((e, i) => {
     const url = e.url ?? "-";
-    const firedAt = e.firedAt instanceof Date ? e.firedAt.toISOString() : String(e.firedAt);
+    const firedAt = e.firedAt.toISOString();
     return [String(i + 1), e.runId, e.stepId, e.event, url, firedAt];
   });
   const data = [header, ...rows];
