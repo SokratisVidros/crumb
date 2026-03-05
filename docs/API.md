@@ -14,6 +14,7 @@ This document describes all HTTP endpoints exposed by the crumb tracking service
 | `GET` | `/t/*` | Open-tracking pixel |
 | `GET` | `/r/:token` | Click-tracking redirect |
 | `GET` | `/api/events/:token` | Fetch stored event (API) |
+| `GET` | `/dev/events` | Dev only: latest 10 events (ASCII table) |
 
 ---
 
@@ -29,19 +30,12 @@ This document describes all HTTP endpoints exposed by the crumb tracking service
 
 ## Token format
 
-Tracking tokens are **HS256 JWTs** signed with `TRACKER_SECRET`. Payload:
-
-```json
-{
-  "runId": "string",
-  "stepId": "string"
-}
-```
+Tracking tokens are **opaque signed strings** (not JWTs). Format: `base64url(runId:stepId)-first12hex(hmac-sha256)` where the HMAC is computed with `TRACKER_SECRET` over the payload `runId:stepId`.
 
 - **runId:** Identifies the “run” (e.g. a campaign or workflow run).
 - **stepId:** Identifies the step within that run (e.g. a specific email or CTA).
 
-Tokens are created with `encodeToken({ runId, stepId, secret })` from `src/token.ts`. Invalid, expired, or tampered tokens are rejected; no event is recorded and (where applicable) an error response is returned.
+Tokens are created with `encodeToken({ runId, stepId, secret })` from `src/token.ts`. Invalid or tampered tokens are rejected; no event is recorded and (where applicable) an error response is returned.
 
 ---
 
@@ -64,13 +58,13 @@ Used to verify the service is up. No authentication.
 
 | Content-Type | Body |
 |-------------|------|
-| `application/json` | `{ "ok": true }` |
+| `application/json` | `{ "ok": true, "crumb": "🍞" }` |
 
 **Example**
 
 ```bash
 curl -s "http://localhost:3000/"
-# {"ok":true}
+# {"ok":true,"crumb":"🍞"}
 ```
 
 ---
@@ -289,6 +283,17 @@ curl -i "http://localhost:3000/api/events/eyJhbGciOiJIUzI1NiJ9..."
 
 ---
 
+## 5. Dev-only: latest events
+
+**`GET /dev/events`**
+
+Available only when `NODE_ENV === "development"`. Returns the latest 10 stored events as a plain-text ASCII table. No authentication. In production (or when not in development), responds with **404** and `{ "error": "not_found" }`.
+
+- **Path:** `/dev/events`
+- **Success (200):** `Content-Type: text/plain; charset=utf-8` — table with columns: #, runId, stepId, event, url, firedAt.
+
+---
+
 ## Tracking context (stored with each event)
 
 For both **open** and **click** events, the server derives a **tracking context** from the request and stores it with the event. Source:
@@ -306,7 +311,8 @@ Fields not present in the request are not stored (or stored as null/omitted depe
 
 | Endpoint | Auth | Input (key parts) | Success response | Error responses |
 |----------|------|-------------------|-------------------|------------------|
-| `GET /` | none | — | `200` `{ "ok": true }` | — |
+| `GET /` | none | — | `200` `{ "ok": true, "crumb": "🍞" }` | — |
 | `GET /t/<token>` or `.../token.gif` | none | Path: token | `200` GIF, no-cache headers | — (always 200 + GIF) |
 | `GET /r/:token?url=...` | none | Path: token; Query: `url` | `302` `Location: url` | `400` `{ "error": "invalid_tracking_link" }` |
 | `GET /api/events/:token` | API key | Path: token; Header: Bearer / x-api-key | `200` `{ "found": true, "data": EventRecord }` or `{ "found": false }` | `401` `{ "error": "unauthorized" }`, `400` `{ "error": "invalid_token" }` |
+| `GET /dev/events` | none | — (dev only) | `200` plain-text table | `404` `{ "error": "not_found" }` when not in development |

@@ -1,4 +1,4 @@
-# crumb
+# crumb 🍞
 
 `crumb` is a lightweight email-interaction tracker service.
 

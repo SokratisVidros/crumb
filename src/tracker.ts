@@ -145,7 +145,7 @@ export const createTracker = (config: TrackerConfig) => {
     return c.json({ found: true, data: event });
   });
 
-  app.get("/", (c) => c.json({ ok: true }));
+  app.get("/", (c) => c.json({ ok: true, crumb: "🍞" }));
 
   app.get("/dev/events", async (c) => {
     if (!isDev()) {
