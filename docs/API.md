@@ -1,6 +1,6 @@
 # API Reference
 
-This document describes all HTTP endpoints exposed by the humantrail tracking service: their purpose, inputs, and outputs.
+This document describes all HTTP endpoints exposed by the crumb tracking service: their purpose, inputs, and outputs.
 
 **Base URL:** The service runs on the configured `PORT` (default `3000`). All paths below are relative to the root (e.g. `http://localhost:3000/`).
 

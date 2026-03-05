@@ -1,6 +1,6 @@
-# humantrail
+# crumb
 
-`humantrail` is a lightweight email-interaction tracker service.
+`crumb` is a lightweight email-interaction tracker service.
 
 It records two events tied to a signed token:
 - `open`: when an email pixel is requested
@@ -10,7 +10,7 @@ The service is designed to be easy to embed in larger systems (campaign engines,
 
 ## Purpose
 
-Email clients and links can only provide limited context. `humantrail` adds a simple server-side tracking layer that:
+Email clients and links can only provide limited context. `crumb` adds a simple server-side tracking layer that:
 - verifies a signed token for each tracked resource
 - records at most one event per `(runId, stepId)` pair (idempotent write)
 - optionally returns the stored event through an API endpoint

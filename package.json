@@ -1,5 +1,5 @@
 {
-  "name": "humantrail",
+  "name": "crumb",
   "scripts": {
     "dev": "NODE_ENV=development bun run --hot src/index.ts",
     "sample": "bun run scripts/sample.ts",

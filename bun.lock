@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "humantrail",
+      "name": "crumb",
       "dependencies": {
         "@dotenvx/dotenvx": "^1.52.0",
         "commander": "^14.0.3",

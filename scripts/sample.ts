@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Generates a test URL and curl command for the humantrail tracker.
+ * Generates a test URL and curl command for the crumb tracker.
  *
  * Loads .env from the project root. Env: BASE_URL, TRACKER_SECRET, TRACKER_API_KEY, PORT
  */
@@ -13,7 +13,7 @@ config({ quiet: true });
 
 program
   .name("sample")
-  .description("Generate a test URL and curl command for the humantrail tracker")
+  .description("Generate a test URL and curl command for the crumb tracker")
   .option("-c, --click", "generate click redirect URL")
   .option("-a, --api", "generate event lookup API URL")
   .option(
