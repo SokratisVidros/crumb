@@ -1,6 +1,17 @@
-name = "humantrail"
+name = "crumb"
 main = "src/index.ts"
 compatibility_date = "2026-02-26"
+compatibility_flags = ["nodejs_compat"]
+
+# Required secret (set via: wrangler secret put TRACKER_SECRET)
+# Optional: TRACKER_API_KEY for API auth (wrangler secret put TRACKER_API_KEY)
+
+# KV namespace so all Worker isolates share events (required for /dev/events and API to see pixel/click events).
+# Create: wrangler kv:namespace create EVENTS
+# Then set id below from the command output (or use preview_id for wrangler dev).
+[[kv_namespaces]]
+binding = "EVENTS_KV"
+id = "41b6164537634e30b735399fbaaa1935"
 
 [observability]
 enabled = true

@@ -105,6 +105,7 @@ describe("KVEventStore", () => {
     kv: {
       get: (key: string) => Promise<string | null>;
       put: (key: string, value: string) => Promise<void>;
+      list: (options: { prefix?: string; limit?: number }) => Promise<{ keys: { name: string }[] }>;
     };
     data: Map<string, string>;
   } {
@@ -115,6 +116,13 @@ describe("KVEventStore", () => {
         get: async (key: string) => data.get(key) ?? null,
         put: async (key: string, value: string) => {
           data.set(key, value);
+        },
+        list: async ({ prefix = "", limit = 1000 }) => {
+          const keys = Array.from(data.keys())
+            .filter((k) => k.startsWith(prefix))
+            .sort()
+            .slice(0, limit);
+          return { keys: keys.map((name) => ({ name })) };
         },
       },
     };
@@ -160,6 +168,20 @@ describe("KVEventStore", () => {
     await store.recordEvent(minimalParams());
     const got = await store.getEvent({ runId: "run-1", stepId: "step-1" });
     expect(got?.firedAt).toBeInstanceOf(Date);
+  });
+
+  it("getLatestEvents returns events newest first, limited", async () => {
+    const { kv } = createFakeKV();
+    const store = new KVEventStore({ kv });
+    await store.recordEvent(minimalParams({ runId: "r1", stepId: "s1" }));
+    await new Promise((r) => setTimeout(r, 2));
+    await store.recordEvent(minimalParams({ runId: "r2", stepId: "s2" }));
+    await new Promise((r) => setTimeout(r, 2));
+    await store.recordEvent(minimalParams({ runId: "r3", stepId: "s3" }));
+    const latest = await store.getLatestEvents(2);
+    expect(latest).toHaveLength(2);
+    expect(latest[0].runId).toBe("r3");
+    expect(latest[1].runId).toBe("r2");
   });
 });
 

@@ -9,8 +9,6 @@ export class MemoryEventStore implements EventStore {
       return;
     }
 
-    console.log("params", params);
-
     this.events.set(key, {
       ...params,
       firedAt: new Date(),
